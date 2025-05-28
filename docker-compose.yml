@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: liftlog-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: liftlog
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - liftlog-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: liftlog-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - liftlog-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: liftlog-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/liftlog?authSource=admin
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: your-production-jwt-secret
+      PORT: 5000
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - liftlog-network
+    volumes:
+      - ./server:/app/server
+      - /app/server/node_modules
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  liftlog-network:
+    driver: bridge
